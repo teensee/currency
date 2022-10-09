@@ -21,10 +21,6 @@ func NewExchangeRateService(db *gorm.DB) *ExchangeRateService {
 	}
 }
 
-func (s ExchangeRateService) GetRateRepository() *rateRepository.RateRepository {
-	return s.repo
-}
-
 func (s ExchangeRateService) GetExchangeRate(currencyFrom, currencyTo string, onDate time.Time) model.CurrencyRate {
 	return s.repo.ExchangeRate(currencyFrom, currencyTo, onDate)
 }

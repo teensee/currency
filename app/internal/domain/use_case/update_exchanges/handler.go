@@ -40,7 +40,7 @@ func (h UpdateExchangeHandler) ExchangeCbrRates(req *http.Request) {
 	log.Printf("Pairs was inserted to db")
 
 	h.srv.SaveRatePairCollection(ratePairCollection)
-	h.srv.TriangulateRates(onDate)
+	go func() { h.srv.TriangulateRates(onDate) }()
 }
 
 func extractFilters(query url.Values) time.Time {
