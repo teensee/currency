@@ -22,7 +22,7 @@ from (
                                  AND pair.currency_from = cr.currency_from
                                  AND pair.currency_to = cr.currency_to
                              )
-where pair.on_date = 2022-10-07
+where pair.on_date = '2022-10-07'
 group by pair.currency_from, pair.currency_to
 ```
 [Источник](http://www.dpxo.net/articles/fx_rate_triangulation_sql.html)
