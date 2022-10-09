@@ -24,7 +24,7 @@ func NewHandler(srv *service.ExchangeRateService) *GetExchangeRateHandler {
 func (h GetExchangeRateHandler) ExchangeRate(r *http.Request) model.CurrencyRate {
 	currencyFrom, currencyTo, onDate := extractRateFilters(r.URL.Query())
 
-	return h.service.GetRateRepository().ExchangeRate(currencyFrom, currencyTo, onDate)
+	return h.service.GetExchangeRate(currencyFrom, currencyTo, onDate)
 }
 
 func extractRateFilters(query url.Values) (string, string, time.Time) {

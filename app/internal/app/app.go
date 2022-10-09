@@ -61,14 +61,6 @@ func configureRoutes(db *gorm.DB) *httprouter.Router {
 	log.Print("Configure routes")
 	r := httprouter.New()
 
-	//todo: remove
-	r.HandlerFunc(http.MethodGet, "/hello", func(writer http.ResponseWriter, request *http.Request) {
-		_, err := writer.Write([]byte("<html><body><h1>Hello</h1></body></html>"))
-		if err != nil {
-			return
-		}
-	})
-
 	srv := service.NewExchangeRateService(db)
 
 	r.HandlerFunc(http.MethodGet, "/exchange", func(writer http.ResponseWriter, request *http.Request) {

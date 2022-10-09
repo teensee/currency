@@ -12,8 +12,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -33,16 +31,16 @@ func (h UpdateExchangeHandler) ExchangeCbrRates(req *http.Request) {
 	cbrRates := getCbrRates(onDate)
 	log.Printf("Cbr Rates on: %s successfully parsed from cbr", cbrRates.Date)
 
+	var ratePairCollection model.RatePairCollection
 	for _, exchangeRate := range cbrRates.Valute {
-		ratePair := processRate(exchangeRate, onDate)
-		h.srv.GetRateRepository().SavePair(ratePair)
-
-		log.Print(ratePair)
+		pair := h.srv.CreateRatePair(exchangeRate, onDate)
+		ratePairCollection.AddRatePair(pair)
 	}
 
 	log.Printf("Pairs was inserted to db")
 
-	h.srv.GetRateRepository().TriangulateRates(onDate)
+	h.srv.SaveRatePairCollection(ratePairCollection)
+	h.srv.TriangulateRates(onDate)
 }
 
 func extractFilters(query url.Values) time.Time {
@@ -62,15 +60,6 @@ func extractFilters(query url.Values) time.Time {
 
 		return onDate
 	}
-}
-
-func processRate(cbrRate dto.CbrRate, onDate time.Time) model.RatePair {
-	log.Printf("process %s/RUB", cbrRate.CharCode)
-
-	exchangeRate, _ := strconv.ParseFloat(strings.Replace(cbrRate.Value, ",", ".", 1), 64)
-	nominal, _ := strconv.ParseFloat(strings.Replace(cbrRate.Nominal, ",", ".", 1), 64)
-
-	return model.NewRatePair(cbrRate.CharCode, "RUB", exchangeRate/nominal, onDate)
 }
 
 // Client request to CBR which return currency exchange rate list

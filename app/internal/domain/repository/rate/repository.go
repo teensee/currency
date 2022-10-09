@@ -27,6 +27,11 @@ func (r RateRepository) SavePair(rate model.RatePair) {
 	r.db.Save(rate.ReverseRate)
 }
 
+func (r RateRepository) SavePairCollection(rate model.RatePairCollection) {
+	r.db.Save(rate.Rate)
+	r.db.Save(rate.ReverseRate)
+}
+
 func (r RateRepository) TriangulateRates(onDate time.Time) {
 	r.db.Exec("insert into currency_rates (currency_from, currency_to, created_at, on_date, exchange_rate) "+
 		"select pair.currency_from, pair.currency_to, pair.created_at, pair.on_date, pair.exchange_rate "+
