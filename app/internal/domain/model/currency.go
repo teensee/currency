@@ -7,11 +7,11 @@ import (
 
 type CurrencyRate struct {
 	//ID           uuid.UUID
-	CurrencyFrom string         `gorm:"primaryKey:idx_name"`
-	CurrencyTo   string         `gorm:"primaryKey:idx_name"`
-	OnDate       datatypes.Date `gorm:"primaryKey:idx_name"`
-	CreatedAt    time.Time
-	ExchangeRate float64
+	CurrencyFrom string         `gorm:"primaryKey:idx_name" json:"from"`
+	CurrencyTo   string         `gorm:"primaryKey:idx_name" json:"to"`
+	OnDate       datatypes.Date `gorm:"primaryKey:idx_name" json:"onDate"`
+	ExchangeRate float64        `json:"rate"`
+	CreatedAt    time.Time      `json:"-"` //ignore this field
 }
 
 type RatePair struct {
