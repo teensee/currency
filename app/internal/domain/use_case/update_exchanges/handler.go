@@ -1,13 +1,12 @@
 package update_exchanges
 
 import (
-	"Currency/internal/app"
+	"Currency/internal/config"
+	"Currency/internal/domain/service"
 	"Currency/internal/domain/use_case/update_exchanges/dto"
-	"database/sql"
 	"encoding/xml"
 	"fmt"
 	"golang.org/x/text/encoding/charmap"
-	"gorm.io/gorm"
 	"io"
 	"log"
 	"net/http"
@@ -18,41 +17,31 @@ import (
 )
 
 type UpdateExchangeHandler struct {
-	db *gorm.DB
+	srv *service.ExchangeRateService
 }
 
-func NewHandler(db *gorm.DB) *UpdateExchangeHandler {
+func NewHandler(srv *service.ExchangeRateService) *UpdateExchangeHandler {
 	return &UpdateExchangeHandler{
-		db: db,
+		srv: srv,
 	}
 }
 
 // ExchangeCbrRates Creates a CBR rates in database
-func (e UpdateExchangeHandler) ExchangeCbrRates(req *http.Request) {
+func (h UpdateExchangeHandler) ExchangeCbrRates(req *http.Request) {
 	onDate := extractFilters(req.URL.Query())
-	rates := getCbrRates(onDate)
-	log.Printf("Cbr Rates on: %s successfully parsed from cbr", rates.Date)
+	cbrRates := getCbrRates(onDate)
+	log.Printf("Cbr Rates on: %s successfully parsed from cbr", cbrRates.Date)
 
-	for _, rate := range rates.Valute {
-		ratePair := processRate(rate, onDate)
-
-		e.db.Save(ratePair.Rate)
-		e.db.Save(ratePair.ReverseRate)
+	for _, exchangeRate := range cbrRates.Valute {
+		ratePair := processRate(exchangeRate, onDate)
+		h.srv.GetRateRepository().SavePair(ratePair)
 
 		log.Print(ratePair)
 	}
 
 	log.Printf("Pairs was inserted to db")
 
-	e.db.Exec("insert into currency_rates (currency_from, currency_to, created_at, on_date, exchange_rate) "+
-		"select pair.currency_from, pair.currency_to, pair.created_at, pair.on_date, pair.exchange_rate "+
-		"from ("+
-		"select f.currency_from, t.currency_from as currency_to, f.created_at, f.on_date, (f.exchange_rate / t.exchange_rate) as exchange_rate from currency_rates f, currency_rates t "+
-		"where f.on_date = t.on_date and f.currency_to = t.currency_to"+
-		") pair "+
-		"LEFT OUTER JOIN currency_rates cr ON (pair.on_date = cr.on_date AND pair.currency_from = cr.currency_from AND pair.currency_to = cr.currency_to) "+
-		"where pair.on_date = @onDate "+
-		"group by pair.currency_from, pair.currency_to", sql.Named("onDate", onDate.Format(app.DbDateFormat)))
+	h.srv.GetRateRepository().TriangulateRates(onDate)
 }
 
 func extractFilters(query url.Values) time.Time {
@@ -64,7 +53,7 @@ func extractFilters(query url.Values) time.Time {
 
 		return onDate
 	} else {
-		onDate, err := time.Parse(app.ApiDateFormat, filters[0])
+		onDate, err := time.Parse(config.ApiDateFormat, filters[0])
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -76,15 +65,16 @@ func extractFilters(query url.Values) time.Time {
 
 func processRate(cbrRate dto.CbrRate, onDate time.Time) RatePair {
 	log.Printf("process %s/RUB", cbrRate.CharCode)
-	rate, _ := strconv.ParseFloat(strings.Replace(cbrRate.Value, ",", ".", 1), 64)
+
+	exchangeRate, _ := strconv.ParseFloat(strings.Replace(cbrRate.Value, ",", ".", 1), 64)
 	nominal, _ := strconv.ParseFloat(strings.Replace(cbrRate.Nominal, ",", ".", 1), 64)
 
-	return NewRatePair(cbrRate.CharCode, "RUB", rate/nominal, onDate)
+	return NewRatePair(cbrRate.CharCode, "RUB", exchangeRate/nominal, onDate)
 }
 
 // Client request to CBR which return currency exchange rate list
 func getCbrRates(onDate time.Time) dto.CbrRates {
-	requestUrl := fmt.Sprintf("https://cbr.ru/scripts/XML_daily.asp?date_req=%s", onDate.Format(app.CbrDateFormat))
+	requestUrl := fmt.Sprintf("https://cbr.ru/scripts/XML_daily.asp?date_req=%s", onDate.Format(config.CbrDateFormat))
 	resp, err := http.Get(requestUrl)
 	if err != nil {
 		log.Fatal(err)
