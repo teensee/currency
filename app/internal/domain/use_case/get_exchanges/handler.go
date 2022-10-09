@@ -1,9 +1,9 @@
 package get_exchanges
 
 import (
-	"Currency/internal/app"
-	"Currency/internal/domain/use_case/update_exchanges"
-	"gorm.io/gorm"
+	"Currency/internal/config"
+	"Currency/internal/domain/model"
+	"Currency/internal/domain/service"
 	"log"
 	"net/http"
 	"net/url"
@@ -12,29 +12,19 @@ import (
 )
 
 type GetExchangeRateHandler struct {
-	db *gorm.DB
+	service *service.ExchangeRateService
 }
 
-func NewHandler(db *gorm.DB) *GetExchangeRateHandler {
+func NewHandler(srv *service.ExchangeRateService) *GetExchangeRateHandler {
 	return &GetExchangeRateHandler{
-		db: db,
+		service: srv,
 	}
 }
 
-func (h GetExchangeRateHandler) ExchangeRate(r *http.Request) update_exchanges.CurrencyRate {
+func (h GetExchangeRateHandler) ExchangeRate(r *http.Request) model.CurrencyRate {
 	currencyFrom, currencyTo, onDate := extractRateFilters(r.URL.Query())
 
-	var rate update_exchanges.CurrencyRate
-	h.db.
-		Where(
-			"currency_from = ? and currency_to = ? and on_date = ?",
-			currencyFrom,
-			currencyTo,
-			onDate.Format(app.DbDateFormat),
-		).
-		First(&rate)
-
-	return rate
+	return h.service.GetRateRepository().ExchangeRate(currencyFrom, currencyTo, onDate)
 }
 
 func extractRateFilters(query url.Values) (string, string, time.Time) {
@@ -54,7 +44,7 @@ func extractRateFilters(query url.Values) (string, string, time.Time) {
 		log.Fatal("'OnDate' is required query parameter")
 	}
 
-	onDate, _ := time.Parse(app.ApiDateFormat, onDateParam[0])
+	onDate, _ := time.Parse(config.ApiDateFormat, onDateParam[0])
 
 	return fromParam[0], toParam[0], onDate
 }
@@ -81,7 +71,7 @@ func extractFilters(query url.Values) (string, string, float64, time.Time) {
 	}
 
 	value, _ := strconv.ParseFloat(valueParam[0], 64)
-	onDate, _ := time.Parse(app.ApiDateFormat, onDateParam[0])
+	onDate, _ := time.Parse(config.ApiDateFormat, onDateParam[0])
 
 	return fromParam[0], toParam[0], value, onDate
 }

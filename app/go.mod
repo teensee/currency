@@ -11,6 +11,7 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/joho/godotenv v1.4.0 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
+	github.com/kisielk/godepgraph v0.0.0-20220719222756-573dc89cecc8 // indirect
 	github.com/mattn/go-sqlite3 v1.14.15 // indirect
 	github.com/rs/cors v1.8.2 // indirect
 	golang.org/x/text v0.3.7 // indirect

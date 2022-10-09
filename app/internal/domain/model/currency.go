@@ -1,4 +1,4 @@
-package update_exchanges
+package model
 
 import (
 	"gorm.io/datatypes"
