@@ -2,6 +2,7 @@ package update_exchanges
 
 import (
 	"Currency/internal/domain/use_case/update_exchanges/dto"
+	"database/sql"
 	"encoding/xml"
 	"fmt"
 	"golang.org/x/text/encoding/charmap"
@@ -42,15 +43,11 @@ func (e UpdateExchangeHandler) ExchangeCbrRates(req *http.Request) {
 	}
 
 	log.Printf("Pairs was inserted to db")
-	triangulatePair()
-}
 
-func triangulatePair() {
-	//todo: add triangulation
-	//insert into currency_rates (id, currency_from, currency_to, created_at, on_date, exchange_rate)
-	//select 1, pair.currency_from, pair.currency_to, pair.created_at, pair.on_date, pair.exchange_rate
+	//insert into currency_rates (currency_from, currency_to, created_at, on_date, exchange_rate)
+	//select pair.currency_from, pair.currency_to, pair.created_at, pair.on_date, pair.exchange_rate
 	//from (
-	//         select 1, f.currency_from, t.currency_from as currency_to, f.created_at, f.on_date, (f.exchange_rate / t.exchange_rate) as exchange_rate
+	//         select f.currency_from, t.currency_from as currency_to, f.created_at, f.on_date, (f.exchange_rate / t.exchange_rate) as exchange_rate
 	//         from currency_rates f, currency_rates t
 	//         where f.on_date = t.on_date
 	//           and f.currency_to = t.currency_to
@@ -62,7 +59,15 @@ func triangulatePair() {
 	//                                 AND pair.currency_to = cr.currency_to
 	//                             )
 	//group by pair.currency_from, pair.currency_to
-	//;
+	e.db.Exec("insert into currency_rates (currency_from, currency_to, created_at, on_date, exchange_rate) "+
+		"select pair.currency_from, pair.currency_to, pair.created_at, pair.on_date, pair.exchange_rate "+
+		"from ("+
+		"select f.currency_from, t.currency_from as currency_to, f.created_at, f.on_date, (f.exchange_rate / t.exchange_rate) as exchange_rate from currency_rates f, currency_rates t "+
+		"where f.on_date = t.on_date and f.currency_to = t.currency_to"+
+		") pair "+
+		"LEFT OUTER JOIN currency_rates cr ON (pair.on_date = cr.on_date AND pair.currency_from = cr.currency_from AND pair.currency_to = cr.currency_to) "+
+		"where pair.on_date = @onDate "+
+		"group by pair.currency_from, pair.currency_to", sql.Named("onDate", onDate.Format("2006-01-02 00:00:00+00:00")))
 }
 
 func extractFilters(query url.Values) time.Time {
