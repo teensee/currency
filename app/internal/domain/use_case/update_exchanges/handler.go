@@ -1,6 +1,7 @@
 package update_exchanges
 
 import (
+	"Currency/internal/app"
 	"Currency/internal/domain/use_case/update_exchanges/dto"
 	"database/sql"
 	"encoding/xml"
@@ -29,7 +30,6 @@ func NewHandler(db *gorm.DB) *UpdateExchangeHandler {
 // ExchangeCbrRates Creates a CBR rates in database
 func (e UpdateExchangeHandler) ExchangeCbrRates(req *http.Request) {
 	onDate := extractFilters(req.URL.Query())
-
 	rates := getCbrRates(onDate)
 	log.Printf("Cbr Rates on: %s successfully parsed from cbr", rates.Date)
 
@@ -52,7 +52,7 @@ func (e UpdateExchangeHandler) ExchangeCbrRates(req *http.Request) {
 		") pair "+
 		"LEFT OUTER JOIN currency_rates cr ON (pair.on_date = cr.on_date AND pair.currency_from = cr.currency_from AND pair.currency_to = cr.currency_to) "+
 		"where pair.on_date = @onDate "+
-		"group by pair.currency_from, pair.currency_to", sql.Named("onDate", onDate.Format("2006-01-02 00:00:00+00:00")))
+		"group by pair.currency_from, pair.currency_to", sql.Named("onDate", onDate.Format(app.DbDateFormat)))
 }
 
 func extractFilters(query url.Values) time.Time {
@@ -64,7 +64,7 @@ func extractFilters(query url.Values) time.Time {
 
 		return onDate
 	} else {
-		onDate, err := time.Parse("02.01.2006", filters[0])
+		onDate, err := time.Parse(app.ApiDateFormat, filters[0])
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -84,7 +84,7 @@ func processRate(cbrRate dto.CbrRate, onDate time.Time) RatePair {
 
 // Client request to CBR which return currency exchange rate list
 func getCbrRates(onDate time.Time) dto.CbrRates {
-	requestUrl := fmt.Sprintf("https://cbr.ru/scripts/XML_daily.asp?date_req=%s", onDate.Format("02/01/2006"))
+	requestUrl := fmt.Sprintf("https://cbr.ru/scripts/XML_daily.asp?date_req=%s", onDate.Format(app.CbrDateFormat))
 	resp, err := http.Get(requestUrl)
 	if err != nil {
 		log.Fatal(err)
