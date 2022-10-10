@@ -28,8 +28,8 @@ func (r RateRepository) SavePair(rate model.RatePair) {
 }
 
 func (r RateRepository) SavePairCollection(rate model.RatePairCollection) {
-	r.db.Save(rate.Rate)
-	r.db.Save(rate.ReverseRate)
+	r.db.Save(rate.RateList)
+	r.db.Save(rate.ReverseRateList)
 }
 
 func (r RateRepository) TriangulateRates(onDate time.Time) {

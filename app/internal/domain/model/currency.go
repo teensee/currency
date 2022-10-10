@@ -20,27 +20,27 @@ type RatePair struct {
 }
 
 type RatePairCollection struct {
-	Rate        []CurrencyRate
-	ReverseRate []CurrencyRate
+	RateList        []CurrencyRate
+	ReverseRateList []CurrencyRate
 }
 
 func (rpc *RatePairCollection) AddRate(rate CurrencyRate) []CurrencyRate {
-	rpc.Rate = append(rpc.Rate, rate)
+	rpc.RateList = append(rpc.RateList, rate)
 
-	return rpc.Rate
+	return rpc.RateList
 }
 
 func (rpc *RatePairCollection) AddReverseRate(rate CurrencyRate) []CurrencyRate {
-	rpc.ReverseRate = append(rpc.ReverseRate, rate)
+	rpc.ReverseRateList = append(rpc.ReverseRateList, rate)
 
-	return rpc.ReverseRate
+	return rpc.ReverseRateList
 }
 
 func (rpc *RatePairCollection) AddRatePair(rate RatePair) ([]CurrencyRate, []CurrencyRate) {
 	rpc.AddRate(rate.Rate)
 	rpc.AddReverseRate(rate.ReverseRate)
 
-	return rpc.Rate, rpc.ReverseRate
+	return rpc.RateList, rpc.ReverseRateList
 }
 
 // NewRate return a new exchange rate
