@@ -73,11 +73,23 @@ func configureRoutes(db *gorm.DB) *httprouter.Router {
 		}
 	})
 
+	r.HandlerFunc(http.MethodGet, "/convert", func(writer http.ResponseWriter, request *http.Request) {
+		exchangeRate := get_exchanges.NewHandler(srv).Convert(request)
+
+		marshalled, _ := json.Marshal(exchangeRate)
+		_, err := writer.Write(marshalled)
+		if err != nil {
+			return
+		}
+	})
+
+	//todo: move to scheduler call
 	r.HandlerFunc(http.MethodGet, "/rates", func(writer http.ResponseWriter, request *http.Request) {
 		update_exchanges.
 			NewHandler(srv).
 			ExchangeCbrRates(request)
 	})
+
 	return r
 }
 

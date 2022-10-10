@@ -4,6 +4,7 @@ import (
 	"Currency/internal/config"
 	"Currency/internal/domain/model"
 	"Currency/internal/domain/service"
+	"Currency/internal/domain/use_case/get_exchanges/dto"
 	"log"
 	"net/http"
 	"net/url"
@@ -25,6 +26,20 @@ func (h GetExchangeRateHandler) ExchangeRate(r *http.Request) model.CurrencyRate
 	currencyFrom, currencyTo, onDate := extractRateFilters(r.URL.Query())
 
 	return h.service.GetExchangeRate(currencyFrom, currencyTo, onDate)
+}
+
+func (h GetExchangeRateHandler) Convert(r *http.Request) dto.ConvertResult {
+	currencyFrom, currencyTo, value, onDateFilter := extractConvertFilters(r.URL.Query())
+	exchangeRate := h.service.GetExchangeRate(currencyFrom, currencyTo, onDateFilter)
+
+	return dto.NewConvertResult(
+		exchangeRate.CurrencyFrom,
+		exchangeRate.CurrencyTo,
+		value,
+		exchangeRate.ExchangeRate,
+		exchangeRate.ExchangeRate*value,
+		onDateFilter,
+	)
 }
 
 func extractRateFilters(query url.Values) (string, string, time.Time) {
@@ -49,7 +64,7 @@ func extractRateFilters(query url.Values) (string, string, time.Time) {
 	return fromParam[0], toParam[0], onDate
 }
 
-func extractFilters(query url.Values) (string, string, float64, time.Time) {
+func extractConvertFilters(query url.Values) (string, string, float64, time.Time) {
 	fromParam, fromPresent := query["from"]
 	toParam, toPresent := query["to"]
 	onDateParam, onDatePresent := query["onDate"]
