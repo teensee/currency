@@ -28,9 +28,8 @@ group by pair.currency_from, pair.currency_to
 [Источник](http://www.dpxo.net/articles/fx_rate_triangulation_sql.html)
 
 ## todo:
-1) обмен валют
-2) обработка ошибок
-3) логгирование
-4) валидация реквеста
-5) докер
-6) постгрес
+1) обработка ошибок
+2) логгирование
+3) валидация реквеста
+4) докер
+5) постгрес

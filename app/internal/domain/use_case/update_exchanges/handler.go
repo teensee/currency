@@ -4,11 +4,6 @@ import (
 	"Currency/internal/config"
 	"Currency/internal/domain/model"
 	"Currency/internal/domain/service"
-	"Currency/internal/domain/use_case/update_exchanges/dto"
-	"encoding/xml"
-	"fmt"
-	"golang.org/x/text/encoding/charmap"
-	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -16,19 +11,27 @@ import (
 )
 
 type UpdateExchangeHandler struct {
-	srv *service.ExchangeRateService
+	srv    *service.ExchangeRateService
+	client *service.CbrClient
 }
 
 func NewHandler(srv *service.ExchangeRateService) *UpdateExchangeHandler {
 	return &UpdateExchangeHandler{
-		srv: srv,
+		srv:    srv,
+		client: service.NewCbrClient(),
 	}
 }
 
-// ExchangeCbrRates Creates a CBR rates in database
-func (h UpdateExchangeHandler) ExchangeCbrRates(req *http.Request) {
+// GetCbrExchangeRates Creates a CBR rates in database
+func (h UpdateExchangeHandler) GetCbrExchangeRates(req *http.Request) {
 	onDate := extractFilters(req.URL.Query())
-	cbrRates := getCbrRates(onDate)
+	isExist := h.srv.IsExistOnDate(onDate)
+
+	if isExist == true {
+		return
+	}
+
+	cbrRates := h.client.GetCbrRates(onDate)
 	log.Printf("Cbr Rates on: %s successfully parsed from cbr", cbrRates.Date)
 
 	var ratePairCollection model.RatePairCollection
@@ -60,34 +63,4 @@ func extractFilters(query url.Values) time.Time {
 
 		return onDate
 	}
-}
-
-// Client request to CBR which return currency exchange rate list
-func getCbrRates(onDate time.Time) dto.CbrRates {
-	requestUrl := fmt.Sprintf("https://cbr.ru/scripts/XML_daily.asp?date_req=%s", onDate.Format(config.CbrDateFormat))
-	resp, err := http.Get(requestUrl)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	defer resp.Body.Close()
-
-	d := xml.NewDecoder(resp.Body)
-	d.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {
-		switch charset {
-		case "windows-1251":
-			return charmap.Windows1251.NewDecoder().Reader(input), nil
-		default:
-			return nil, fmt.Errorf("unknown charset: %s", charset)
-		}
-	}
-
-	var rates dto.CbrRates
-	err = d.Decode(&rates)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return rates
 }

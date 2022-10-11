@@ -15,6 +15,13 @@ type Config struct {
 	}
 	AppConfig struct {
 		LogLever string
+		Database struct {
+			Host     string
+			Port     string
+			DbName   string `env:"DB_NAME" env-default:"currency"`
+			User     string
+			Password string
+		}
 	}
 }
 

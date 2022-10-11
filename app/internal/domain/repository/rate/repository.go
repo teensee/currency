@@ -57,3 +57,10 @@ func (r RateRepository) ExchangeRate(currencyFrom, currencyTo string, onDate tim
 
 	return rate
 }
+
+func (r RateRepository) IsExistOnDate(date time.Time) bool {
+	var count int64
+	r.db.Model(&model.CurrencyRate{}).Where("on_date = ?", date.Format(config.DbDateFormat)).Count(&count)
+
+	return count > 0
+}

@@ -41,3 +41,7 @@ func (s ExchangeRateService) SaveRatePairCollection(pairs model.RatePairCollecti
 func (s ExchangeRateService) TriangulateRates(onDate time.Time) {
 	s.repo.TriangulateRates(onDate)
 }
+
+func (s ExchangeRateService) IsExistOnDate(date time.Time) bool {
+	return s.repo.IsExistOnDate(date)
+}

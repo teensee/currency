@@ -5,6 +5,7 @@ import (
 	"Currency/internal/domain/model"
 	"Currency/internal/domain/service"
 	"Currency/internal/domain/use_case/get_exchanges"
+	"Currency/internal/domain/use_case/get_exchanges/dto"
 	"Currency/internal/domain/use_case/update_exchanges"
 	"context"
 	"encoding/json"
@@ -61,33 +62,40 @@ func configureRoutes(db *gorm.DB) *httprouter.Router {
 	log.Print("Configure routes")
 	r := httprouter.New()
 
-	srv := service.NewExchangeRateService(db)
+	exchangeRateService := service.NewExchangeRateService(db)
 
 	r.HandlerFunc(http.MethodGet, "/exchange", func(writer http.ResponseWriter, request *http.Request) {
-		exchangeRate := get_exchanges.NewHandler(srv).ExchangeRate(request)
+		exchangeRate, err := get_exchanges.NewHandler(exchangeRateService).ExchangeRate(request)
 
-		marshalled, _ := json.Marshal(exchangeRate)
-		_, err := writer.Write(marshalled)
 		if err != nil {
+			marshalled, _ := json.Marshal(dto.NewError(err))
+			_, _ = writer.Write(marshalled)
+
 			return
 		}
+
+		marshalled, _ := json.Marshal(exchangeRate)
+		_, _ = writer.Write(marshalled)
 	})
-
 	r.HandlerFunc(http.MethodGet, "/convert", func(writer http.ResponseWriter, request *http.Request) {
-		exchangeRate := get_exchanges.NewHandler(srv).Convert(request)
+		exchangeRate, err := get_exchanges.NewHandler(exchangeRateService).Convert(request)
 
-		marshalled, _ := json.Marshal(exchangeRate)
-		_, err := writer.Write(marshalled)
 		if err != nil {
+			marshalled, _ := json.Marshal(dto.NewError(err))
+			_, _ = writer.Write(marshalled)
+
 			return
 		}
+
+		marshalled, _ := json.Marshal(exchangeRate)
+		_, _ = writer.Write(marshalled)
 	})
 
 	//todo: move to scheduler call
 	r.HandlerFunc(http.MethodGet, "/rates", func(writer http.ResponseWriter, request *http.Request) {
 		update_exchanges.
-			NewHandler(srv).
-			ExchangeCbrRates(request)
+			NewHandler(exchangeRateService).
+			GetCbrExchangeRates(request)
 	})
 
 	return r

@@ -5,7 +5,7 @@ import (
 	"Currency/internal/domain/model"
 	"Currency/internal/domain/service"
 	"Currency/internal/domain/use_case/get_exchanges/dto"
-	"log"
+	"errors"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -22,71 +22,79 @@ func NewHandler(srv *service.ExchangeRateService) *GetExchangeRateHandler {
 	}
 }
 
-func (h GetExchangeRateHandler) ExchangeRate(r *http.Request) model.CurrencyRate {
-	currencyFrom, currencyTo, onDate := extractRateFilters(r.URL.Query())
+func (h GetExchangeRateHandler) ExchangeRate(r *http.Request) (model.CurrencyRate, error) {
+	reqParam, err := extractRateFilters(r.URL.Query())
 
-	return h.service.GetExchangeRate(currencyFrom, currencyTo, onDate)
+	if err != nil {
+		return model.CurrencyRate{}, err
+	}
+
+	return h.service.GetExchangeRate(reqParam.From, reqParam.To, reqParam.OnDate), nil
 }
 
-func (h GetExchangeRateHandler) Convert(r *http.Request) dto.ConvertResult {
-	currencyFrom, currencyTo, value, onDateFilter := extractConvertFilters(r.URL.Query())
-	exchangeRate := h.service.GetExchangeRate(currencyFrom, currencyTo, onDateFilter)
+func (h GetExchangeRateHandler) Convert(r *http.Request) (dto.ConvertResult, error) {
+	reqParam, err := extractConvertFilters(r.URL.Query())
+
+	if err != nil {
+		return dto.ConvertResult{}, err
+	}
+	exchangeRate := h.service.GetExchangeRate(reqParam.From, reqParam.To, reqParam.OnDate)
 
 	return dto.NewConvertResult(
 		exchangeRate.CurrencyFrom,
 		exchangeRate.CurrencyTo,
-		value,
+		reqParam.Value,
 		exchangeRate.ExchangeRate,
-		exchangeRate.ExchangeRate*value,
-		onDateFilter,
-	)
+		exchangeRate.ExchangeRate*reqParam.Value,
+		reqParam.OnDate,
+	), nil
 }
 
-func extractRateFilters(query url.Values) (string, string, time.Time) {
+// Базовая валидация и проверка на наличие get-параметров 'from', 'to', 'onDate'
+// Для запроса вида /exchange?from=USD&to=EUR&onDate=20.12.2000
+func extractRateFilters(query url.Values) (dto.ExchangeRequestParameters, error) {
 	fromParam, fromPresent := query["from"]
 	toParam, toPresent := query["to"]
 	onDateParam, onDatePresent := query["onDate"]
 
 	if !fromPresent {
-		log.Fatal("'From' is required query parameter")
+		return dto.ExchangeRequestParameters{}, errors.New("'from' is required query parameter")
 	}
 
 	if !toPresent {
-		log.Fatal("'To' is required query parameter")
+		return dto.ExchangeRequestParameters{}, errors.New("'to' is required query parameter")
 	}
 
 	if !onDatePresent {
-		log.Fatal("'OnDate' is required query parameter")
+		return dto.ExchangeRequestParameters{}, errors.New("'onDate' is required query parameter")
 	}
 
-	onDate, _ := time.Parse(config.ApiDateFormat, onDateParam[0])
+	onDate, err := time.Parse(config.ApiDateFormat, onDateParam[0])
 
-	return fromParam[0], toParam[0], onDate
+	if err != nil {
+		return dto.ExchangeRequestParameters{}, errors.New("'onDate' is not correctly passed, please use a DD.MM.YYYY format")
+	}
+
+	return dto.NewExchangeRequestParameters(fromParam[0], toParam[0], onDate), nil
 }
 
-func extractConvertFilters(query url.Values) (string, string, float64, time.Time) {
-	fromParam, fromPresent := query["from"]
-	toParam, toPresent := query["to"]
-	onDateParam, onDatePresent := query["onDate"]
+func extractConvertFilters(query url.Values) (dto.ConvertRequestParameters, error) {
+	exchangeParams, err := extractRateFilters(query)
+	if err != nil {
+		return dto.ConvertRequestParameters{}, err
+	}
+
 	valueParam, valuePresent := query["value"]
 
-	if !fromPresent {
-		log.Fatal("'From' is required query parameter")
-	}
-
-	if !toPresent {
-		log.Fatal("'To' is required query parameter")
-	}
-
 	if !valuePresent {
-		log.Fatal("'Value' is required query parameter")
-	}
-	if !onDatePresent {
-		log.Fatal("'OnDate' is required query parameter")
+		return dto.ConvertRequestParameters{}, errors.New("'value' is required query parameter")
 	}
 
-	value, _ := strconv.ParseFloat(valueParam[0], 64)
-	onDate, _ := time.Parse(config.ApiDateFormat, onDateParam[0])
+	value, err := strconv.ParseFloat(valueParam[0], 64)
 
-	return fromParam[0], toParam[0], value, onDate
+	if err != nil {
+		return dto.ConvertRequestParameters{}, err
+	}
+
+	return dto.NewConvertRequestParametersWithExchange(exchangeParams, value), nil
 }
