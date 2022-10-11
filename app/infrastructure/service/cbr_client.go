@@ -1,8 +1,8 @@
 package service
 
 import (
+	"Currency/infrastructure/use_case/update_exchanges/dto"
 	"Currency/internal/config"
-	"Currency/internal/infrastructure/use_case/update_exchanges/dto"
 	"encoding/xml"
 	"fmt"
 	"golang.org/x/text/encoding/charmap"

@@ -1,21 +1,21 @@
 package get_exchanges
 
 import (
-	"Currency/internal/infrastructure/dto"
-	"Currency/internal/infrastructure/service"
+	"Currency/infrastructure/dto"
+	service2 "Currency/infrastructure/service"
 	"encoding/json"
 	"net/http"
 )
 
 type GetExchangeRateHandler struct {
-	service        *service.ExchangeRateService
-	queryExtractor *service.QueryExtractor
+	service        *service2.ExchangeRateService
+	queryExtractor *service2.QueryExtractor
 }
 
-func NewHandler(srv *service.ExchangeRateService) *GetExchangeRateHandler {
+func NewHandler(srv *service2.ExchangeRateService) *GetExchangeRateHandler {
 	return &GetExchangeRateHandler{
 		service:        srv,
-		queryExtractor: service.NewQueryExtractor(),
+		queryExtractor: service2.NewQueryExtractor(),
 	}
 }
 

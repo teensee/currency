@@ -1,11 +1,11 @@
 package app
 
 import (
+	"Currency/infrastructure/model"
+	"Currency/infrastructure/service"
+	"Currency/infrastructure/use_case/get_exchanges"
+	"Currency/infrastructure/use_case/update_exchanges"
 	"Currency/internal/config"
-	"Currency/internal/infrastructure/model"
-	"Currency/internal/infrastructure/service"
-	"Currency/internal/infrastructure/use_case/get_exchanges"
-	"Currency/internal/infrastructure/use_case/update_exchanges"
 	"context"
 	"errors"
 	"fmt"
