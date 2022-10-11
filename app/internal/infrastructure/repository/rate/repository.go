@@ -2,7 +2,7 @@ package rate_repository
 
 import (
 	"Currency/internal/config"
-	"Currency/internal/domain/model"
+	"Currency/internal/infrastructure/model"
 	"database/sql"
 	"gorm.io/gorm"
 	"time"
@@ -18,21 +18,28 @@ func NewRateRepository(db *gorm.DB) *RateRepository {
 	}
 }
 
-func (r RateRepository) Save(rate model.CurrencyRate) {
+// Save Сохранение курса model.CurrencyRate
+func (r *RateRepository) Save(rate model.CurrencyRate) {
 	r.db.Save(rate)
 }
 
-func (r RateRepository) SavePair(rate model.RatePair) {
+// SavePair Сохраннеие пары model.RatePair
+// Rate - прямой курс валют полученный от цб
+// ReverseRate - обратный, полученный путем деления 1 / Rate
+func (r *RateRepository) SavePair(rate model.RatePair) {
 	r.db.Save(rate.Rate)
 	r.db.Save(rate.ReverseRate)
 }
 
-func (r RateRepository) SavePairCollection(rate model.RatePairCollection) {
+// SavePairCollection Сохранение коллекций
+// Rate 	   []model.CurrencyRate и
+// ReverseRate []model.CurrencyRate
+func (r *RateRepository) SavePairCollection(rate model.RatePairCollection) {
 	r.db.Save(rate.RateList)
 	r.db.Save(rate.ReverseRateList)
 }
 
-func (r RateRepository) TriangulateRates(onDate time.Time) {
+func (r *RateRepository) TriangulateRates(onDate time.Time) {
 	r.db.Exec("insert into currency_rates (currency_from, currency_to, created_at, on_date, exchange_rate) "+
 		"select pair.currency_from, pair.currency_to, pair.created_at, pair.on_date, pair.exchange_rate "+
 		"from ("+
@@ -44,7 +51,7 @@ func (r RateRepository) TriangulateRates(onDate time.Time) {
 		"group by pair.currency_from, pair.currency_to", sql.Named("onDate", onDate.Format(config.DbDateFormat)))
 }
 
-func (r RateRepository) ExchangeRate(currencyFrom, currencyTo string, onDate time.Time) model.CurrencyRate {
+func (r *RateRepository) ExchangeRate(currencyFrom, currencyTo string, onDate time.Time) model.CurrencyRate {
 	var rate model.CurrencyRate
 	r.db.
 		Where(
@@ -58,7 +65,7 @@ func (r RateRepository) ExchangeRate(currencyFrom, currencyTo string, onDate tim
 	return rate
 }
 
-func (r RateRepository) IsExistOnDate(date time.Time) bool {
+func (r *RateRepository) IsExistOnDate(date time.Time) bool {
 	var count int64
 	r.db.Model(&model.CurrencyRate{}).Where("on_date = ?", date.Format(config.DbDateFormat)).Count(&count)
 

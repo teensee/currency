@@ -2,13 +2,11 @@ package app
 
 import (
 	"Currency/internal/config"
-	"Currency/internal/domain/model"
-	"Currency/internal/domain/service"
-	"Currency/internal/domain/use_case/get_exchanges"
-	"Currency/internal/domain/use_case/get_exchanges/dto"
-	"Currency/internal/domain/use_case/update_exchanges"
+	"Currency/internal/infrastructure/model"
+	"Currency/internal/infrastructure/service"
+	"Currency/internal/infrastructure/use_case/get_exchanges"
+	"Currency/internal/infrastructure/use_case/update_exchanges"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/julienschmidt/httprouter"
@@ -63,40 +61,16 @@ func configureRoutes(db *gorm.DB) *httprouter.Router {
 	r := httprouter.New()
 
 	exchangeRateService := service.NewExchangeRateService(db)
+	getExchangeHandler := get_exchanges.NewHandler(exchangeRateService)
+	updateExchangeHandler := update_exchanges.NewHandler(exchangeRateService)
 
-	r.HandlerFunc(http.MethodGet, "/exchange", func(writer http.ResponseWriter, request *http.Request) {
-		exchangeRate, err := get_exchanges.NewHandler(exchangeRateService).ExchangeRate(request)
-
-		if err != nil {
-			marshalled, _ := json.Marshal(dto.NewError(err))
-			_, _ = writer.Write(marshalled)
-
-			return
-		}
-
-		marshalled, _ := json.Marshal(exchangeRate)
-		_, _ = writer.Write(marshalled)
-	})
-	r.HandlerFunc(http.MethodGet, "/convert", func(writer http.ResponseWriter, request *http.Request) {
-		exchangeRate, err := get_exchanges.NewHandler(exchangeRateService).Convert(request)
-
-		if err != nil {
-			marshalled, _ := json.Marshal(dto.NewError(err))
-			_, _ = writer.Write(marshalled)
-
-			return
-		}
-
-		marshalled, _ := json.Marshal(exchangeRate)
-		_, _ = writer.Write(marshalled)
-	})
+	r.HandlerFunc(http.MethodGet, "/exchange", getExchangeHandler.ExchangeRate)
+	r.HandlerFunc(http.MethodGet, "/convert", getExchangeHandler.Convert)
 
 	//todo: move to scheduler call
-	r.HandlerFunc(http.MethodGet, "/rates", func(writer http.ResponseWriter, request *http.Request) {
-		update_exchanges.
-			NewHandler(exchangeRateService).
-			GetCbrExchangeRates(request)
-	})
+	r.HandlerFunc(http.MethodGet, "/rates", updateExchangeHandler.GetCbrExchangeRates)
+
+	updateExchangeHandler.SyncRatesOnStartup()
 
 	return r
 }
