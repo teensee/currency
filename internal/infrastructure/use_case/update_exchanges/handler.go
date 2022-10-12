@@ -1,21 +1,21 @@
 package update_exchanges
 
 import (
-	service2 "Currency/infrastructure/service"
+	"Currency/internal/infrastructure/service"
 	"log"
 	"net/http"
 	"time"
 )
 
 type UpdateExchangeHandler struct {
-	srv            *service2.ExchangeRateService
-	queryExtractor *service2.QueryExtractor
+	srv            *service.ExchangeRateService
+	queryExtractor *service.QueryExtractor
 }
 
-func NewHandler(srv *service2.ExchangeRateService) *UpdateExchangeHandler {
+func NewHandler(srv *service.ExchangeRateService) *UpdateExchangeHandler {
 	return &UpdateExchangeHandler{
 		srv:            srv,
-		queryExtractor: service2.NewQueryExtractor(),
+		queryExtractor: service.NewQueryExtractor(),
 	}
 }
 

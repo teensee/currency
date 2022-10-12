@@ -1,8 +1,8 @@
 package rate_repository
 
 import (
-	"Currency/infrastructure/model"
 	"Currency/internal/config"
+	"Currency/internal/infrastructure/model"
 	"database/sql"
 	"gorm.io/gorm"
 	"time"

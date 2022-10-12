@@ -1,10 +1,10 @@
 package service
 
 import (
-	"Currency/infrastructure/model"
-	rateRepository "Currency/infrastructure/repository/rate"
-	exchangeDto "Currency/infrastructure/use_case/get_exchanges/dto"
-	"Currency/infrastructure/use_case/update_exchanges/dto"
+	"Currency/internal/infrastructure/model"
+	rateRepository "Currency/internal/infrastructure/repository/rate"
+	exchangeDto "Currency/internal/infrastructure/use_case/get_exchanges/dto"
+	"Currency/internal/infrastructure/use_case/update_exchanges/dto"
 	"gorm.io/gorm"
 	"log"
 	"strconv"

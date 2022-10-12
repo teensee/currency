@@ -1,8 +1,8 @@
 package service
 
 import (
-	"Currency/infrastructure/dto"
 	"Currency/internal/config"
+	"Currency/internal/infrastructure/dto"
 	"errors"
 	"log"
 	"net/url"

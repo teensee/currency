@@ -1,4 +1,4 @@
 currency.db
 Makefile
 .idea
-app/.env
+.env
