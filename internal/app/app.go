@@ -2,10 +2,10 @@ package app
 
 import (
 	"Currency/internal/config"
-	"Currency/internal/infrastructure/model"
-	"Currency/internal/infrastructure/service"
-	"Currency/internal/infrastructure/use_case/get_exchanges"
-	"Currency/internal/infrastructure/use_case/update_exchanges"
+	"Currency/internal/domain/rate/handlers/get_exchanges"
+	"Currency/internal/domain/rate/handlers/update_exchanges"
+	"Currency/internal/domain/rate/model"
+	"Currency/internal/domain/rate/service"
 	"context"
 	"errors"
 	"fmt"
@@ -20,10 +20,11 @@ import (
 )
 
 type App struct {
-	config     *config.Config
-	router     *httprouter.Router
-	httpServer *http.Server
-	db         *gorm.DB
+	config      *config.Config
+	router      *httprouter.Router
+	httpServer  *http.Server
+	db          *gorm.DB
+	handlersMap map[string]interface{}
 }
 
 func NewKernel(config *config.Config) App {
@@ -39,15 +40,11 @@ func (a *App) Run() {
 }
 
 func (a *App) ConfigureDatabase() *App {
+	log.Println("Start configure database connection")
 	appDbConf := a.config.AppConfig.Database
-	dsn := "host=" + appDbConf.Host + " user=" + appDbConf.User + " password=" + appDbConf.Password + " dbname=currency port=" + appDbConf.Port + " sslmode=disable TimeZone=Asia/Shanghai"
+	dsn := "host=" + appDbConf.Host + " user=" + appDbConf.User + " password=" + appDbConf.Password + " dbname=currency port=" + appDbConf.Port + " sslmode=disable TimeZone=Europe/Moscow"
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = db.AutoMigrate(&model.CurrencyRate{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -57,23 +54,43 @@ func (a *App) ConfigureDatabase() *App {
 	return a
 }
 
-func (a *App) ConfigureRoutes() *App {
-	log.Print("Configure routes")
-	r := httprouter.New()
-
+func (a *App) ConfigureHandlers() *App {
 	exchangeRateService := service.NewExchangeRateService(a.db)
 	getExchangeHandler := get_exchanges.NewHandler(exchangeRateService)
 	updateExchangeHandler := update_exchanges.NewHandler(exchangeRateService)
 
-	r.HandlerFunc(http.MethodGet, "/exchange", getExchangeHandler.ExchangeRate)
-	r.HandlerFunc(http.MethodGet, "/convert", getExchangeHandler.Convert)
+	a.handlersMap = map[string]interface{}{
+		"GetExchangeHandler":    getExchangeHandler,
+		"UpdateExchangeHandler": updateExchangeHandler,
+	}
+
+	return a
+}
+
+func (a *App) ConfigureRoutes() *App {
+	log.Print("Configure routes")
+	r := httprouter.New()
+
+	r.HandlerFunc(http.MethodGet, "/exchange", a.handlersMap["GetExchangeHandler"].(*get_exchanges.GetExchangeRateHandler).ExchangeRate)
+	r.HandlerFunc(http.MethodGet, "/convert", a.handlersMap["GetExchangeHandler"].(*get_exchanges.GetExchangeRateHandler).Convert)
 
 	//todo: move to scheduler call
-	r.HandlerFunc(http.MethodGet, "/rates", updateExchangeHandler.GetCbrExchangeRates)
-
-	updateExchangeHandler.SyncRatesOnStartup()
+	r.HandlerFunc(http.MethodGet, "/rates", a.handlersMap["UpdateExchangeHandler"].(*update_exchanges.UpdateExchangeHandler).GetCbrExchangeRates)
 
 	a.router = r
+
+	return a
+}
+
+func (a *App) AfterInitializationEvents() *App {
+	log.Println("Run after initialization events")
+
+	err := a.db.AutoMigrate(&model.CurrencyRate{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	a.handlersMap["UpdateExchangeHandler"].(*update_exchanges.UpdateExchangeHandler).SyncRatesOnStartup()
 
 	return a
 }

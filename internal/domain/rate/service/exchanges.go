@@ -1,10 +1,11 @@
 package service
 
 import (
-	"Currency/internal/infrastructure/model"
-	rateRepository "Currency/internal/infrastructure/repository/rate"
-	exchangeDto "Currency/internal/infrastructure/use_case/get_exchanges/dto"
-	"Currency/internal/infrastructure/use_case/update_exchanges/dto"
+	exchangeDto "Currency/internal/domain/rate/handlers/get_exchanges/dto"
+	"Currency/internal/domain/rate/handlers/update_exchanges/dto"
+	"Currency/internal/domain/rate/model"
+	rateRepository "Currency/internal/domain/rate/storage"
+	"Currency/internal/infrastructure/service"
 	"gorm.io/gorm"
 	"log"
 	"strconv"
@@ -14,7 +15,7 @@ import (
 
 type ExchangeRateService struct {
 	repo   *rateRepository.RateRepository
-	client *CbrClient
+	client *service.CbrClient
 }
 
 func NewExchangeRateService(db *gorm.DB) *ExchangeRateService {
@@ -51,6 +52,7 @@ func (s *ExchangeRateService) GetNewExchangeRateOnDate(onDate time.Time) {
 	isExist := s.IsExistOnDate(onDate)
 
 	if isExist == true {
+		log.Printf("Cyrrencies already exist on: %s", onDate)
 		return
 	}
 	cbrRates := s.client.GetCbrRates(onDate)
@@ -58,7 +60,7 @@ func (s *ExchangeRateService) GetNewExchangeRateOnDate(onDate time.Time) {
 
 	var ratePairCollection model.RatePairCollection
 	for _, exchangeRate := range cbrRates.Valute {
-		pair := s.createRatePair(exchangeRate, onDate)
+		pair := createRatePair(exchangeRate, onDate)
 		ratePairCollection.AddRatePair(pair)
 	}
 
@@ -68,19 +70,19 @@ func (s *ExchangeRateService) GetNewExchangeRateOnDate(onDate time.Time) {
 	log.Printf("Pairs was inserted to db")
 }
 
-func (s *ExchangeRateService) createRatePair(rate dto.CbrRate, date time.Time) model.RatePair {
-	log.Printf("process %s/RUB", rate.CharCode)
-
-	exchangeRate, _ := strconv.ParseFloat(strings.Replace(rate.Value, ",", ".", 1), 64)
-	nominal, _ := strconv.ParseFloat(strings.Replace(rate.Nominal, ",", ".", 1), 64)
-
-	return model.NewRatePair(rate.CharCode, "RUB", exchangeRate/nominal, date)
-}
-
 func (s *ExchangeRateService) saveRatePairCollection(pairs model.RatePairCollection) {
 	s.repo.SavePairCollection(pairs)
 }
 
 func (s *ExchangeRateService) triangulateRates(onDate time.Time) {
 	s.repo.TriangulateRates(onDate)
+}
+
+func createRatePair(rate dto.CbrRate, date time.Time) model.RatePair {
+	log.Printf("process %s/RUB", rate.CharCode)
+
+	exchangeRate, _ := strconv.ParseFloat(strings.Replace(rate.Value, ",", ".", 1), 64)
+	nominal, _ := strconv.ParseFloat(strings.Replace(rate.Nominal, ",", ".", 1), 64)
+
+	return model.NewRatePair(rate.CharCode, "RUB", exchangeRate/nominal, date)
 }

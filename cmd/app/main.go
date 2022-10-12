@@ -13,6 +13,8 @@ func main() {
 	kernel := app.NewKernel(cfg)
 	kernel.
 		ConfigureDatabase().
+		ConfigureHandlers().
 		ConfigureRoutes().
+		AfterInitializationEvents().
 		Run()
 }
