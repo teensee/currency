@@ -1,0 +1,24 @@
+version: '3.2'
+services:
+  postgres:
+    image: postgres:12.3
+    container_name: ${SERVICE}_postgres
+    hostname: ${DB_HOST}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./.docker/data/postgres:/var/lib/postgresql/data
+      - ./.docker/conf/postgres/initdb:/docker-entrypoint-initdb.d
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      PGDATA: /pgdata
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${BACKEND_SUBNET}

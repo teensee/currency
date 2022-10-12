@@ -16,11 +16,11 @@ type Config struct {
 	AppConfig struct {
 		LogLever string
 		Database struct {
-			Host     string
-			Port     string
+			Host     string `env:"DB_HOST"`
+			Port     string `env:"DB_PORT"`
 			DbName   string `env:"DB_NAME" env-default:"currency"`
-			User     string
-			Password string
+			User     string `env:"DB_USER"`
+			Password string `env:"DB_PASSWORD"`
 		}
 	}
 }
@@ -34,6 +34,7 @@ func GetConfig() *Config {
 
 		instance = &Config{}
 
+		cleanenv.ReadConfig("./.env", instance)
 		if err := cleanenv.ReadEnv(instance); err != nil {
 
 			description, _ := cleanenv.GetDescription(instance, nil)

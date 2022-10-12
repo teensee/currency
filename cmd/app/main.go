@@ -10,12 +10,9 @@ func main() {
 	log.Print("Startup, load config")
 	cfg := config.GetConfig()
 
-	kernel, err := app.NewKernel(cfg)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Print("Run application")
-	kernel.Run()
+	kernel := app.NewKernel(cfg)
+	kernel.
+		ConfigureDatabase().
+		ConfigureRoutes().
+		Run()
 }

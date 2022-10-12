@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"github.com/julienschmidt/httprouter"
 	"github.com/rs/cors"
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"log"
 	"net"
@@ -26,13 +26,10 @@ type App struct {
 	db         *gorm.DB
 }
 
-func NewKernel(config *config.Config) (App, error) {
-	db := configureDatabase()
+func NewKernel(config *config.Config) App {
 	return App{
 		config: config,
-		db:     db,
-		router: configureRoutes(db),
-	}, nil
+	}
 }
 
 func (a *App) Run() {
@@ -41,8 +38,10 @@ func (a *App) Run() {
 	a.startHttp()
 }
 
-func configureDatabase() *gorm.DB {
-	db, err := gorm.Open(sqlite.Open("currency.db"), &gorm.Config{})
+func (a *App) ConfigureDatabase() *App {
+	appDbConf := a.config.AppConfig.Database
+	dsn := "host=" + appDbConf.Host + " user=" + appDbConf.User + " password=" + appDbConf.Password + " dbname=currency port=" + appDbConf.Port + " sslmode=disable TimeZone=Asia/Shanghai"
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 
 	if err != nil {
 		log.Fatal(err)
@@ -53,14 +52,16 @@ func configureDatabase() *gorm.DB {
 		log.Fatal(err)
 	}
 
-	return db
+	a.db = db
+
+	return a
 }
 
-func configureRoutes(db *gorm.DB) *httprouter.Router {
+func (a *App) ConfigureRoutes() *App {
 	log.Print("Configure routes")
 	r := httprouter.New()
 
-	exchangeRateService := service.NewExchangeRateService(db)
+	exchangeRateService := service.NewExchangeRateService(a.db)
 	getExchangeHandler := get_exchanges.NewHandler(exchangeRateService)
 	updateExchangeHandler := update_exchanges.NewHandler(exchangeRateService)
 
@@ -72,7 +73,9 @@ func configureRoutes(db *gorm.DB) *httprouter.Router {
 
 	updateExchangeHandler.SyncRatesOnStartup()
 
-	return r
+	a.router = r
+
+	return a
 }
 
 func (a *App) startHttp() {
