@@ -41,9 +41,7 @@ func (a *App) Run() {
 
 func (a *App) ConfigureDatabase() *App {
 	log.Println("Start configure database connection")
-	appDbConf := a.config.AppConfig.Database
-	dsn := "host=" + appDbConf.Host + " user=" + appDbConf.User + " password=" + appDbConf.Password + " dbname=currency port=" + appDbConf.Port + " sslmode=disable TimeZone=Europe/Moscow"
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(a.config.GetDsn()), &gorm.Config{})
 
 	if err != nil {
 		log.Fatal(err)
@@ -71,11 +69,12 @@ func (a *App) ConfigureRoutes() *App {
 	log.Print("Configure routes")
 	r := httprouter.New()
 
-	r.HandlerFunc(http.MethodGet, "/exchange", a.handlersMap["GetExchangeHandler"].(*get_exchanges.GetExchangeRateHandler).ExchangeRate)
-	r.HandlerFunc(http.MethodGet, "/convert", a.handlersMap["GetExchangeHandler"].(*get_exchanges.GetExchangeRateHandler).Convert)
+	r.GET("/exchange", a.handlersMap["GetExchangeHandler"].(*get_exchanges.GetExchangeRateHandler).ExchangeRate)
+	r.GET("/convert", a.handlersMap["GetExchangeHandler"].(*get_exchanges.GetExchangeRateHandler).Convert)
 
 	//todo: move to scheduler call
 	r.HandlerFunc(http.MethodGet, "/rates", a.handlersMap["UpdateExchangeHandler"].(*update_exchanges.UpdateExchangeHandler).GetCbrExchangeRates)
+	r.HandlerFunc(http.MethodGet, "/rush", a.handlersMap["UpdateExchangeHandler"].(*update_exchanges.UpdateExchangeHandler).RushRates)
 
 	a.router = r
 
@@ -90,7 +89,9 @@ func (a *App) AfterInitializationEvents() *App {
 		log.Fatal(err)
 	}
 
-	a.handlersMap["UpdateExchangeHandler"].(*update_exchanges.UpdateExchangeHandler).SyncRatesOnStartup()
+	if a.config.AppConfig.SyncRatesAfterStartup == true {
+		a.handlersMap["UpdateExchangeHandler"].(*update_exchanges.UpdateExchangeHandler).SyncRatesOnStartup()
+	}
 
 	return a
 }

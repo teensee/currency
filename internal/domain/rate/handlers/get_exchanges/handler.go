@@ -5,6 +5,7 @@ import (
 	"Currency/internal/infrastructure/dto"
 	service3 "Currency/internal/infrastructure/service"
 	"encoding/json"
+	"github.com/julienschmidt/httprouter"
 	"net/http"
 )
 
@@ -20,7 +21,7 @@ func NewHandler(srv *service2.ExchangeRateService) *GetExchangeRateHandler {
 	}
 }
 
-func (h GetExchangeRateHandler) ExchangeRate(w http.ResponseWriter, r *http.Request) {
+func (h *GetExchangeRateHandler) ExchangeRate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	reqParam, err := h.queryExtractor.ExtractRateParams(r.URL.Query())
 	exchangeRate := h.service.GetExchangeRate(reqParam.From, reqParam.To, reqParam.OnDate.OnDate)
 
@@ -33,7 +34,7 @@ func (h GetExchangeRateHandler) ExchangeRate(w http.ResponseWriter, r *http.Requ
 	return
 }
 
-func (h GetExchangeRateHandler) Convert(w http.ResponseWriter, r *http.Request) {
+func (h *GetExchangeRateHandler) Convert(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	reqParam, err := h.queryExtractor.ExtractConvertParams(r.URL.Query())
 
 	if err != nil {

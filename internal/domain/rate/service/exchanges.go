@@ -5,17 +5,17 @@ import (
 	"Currency/internal/domain/rate/handlers/update_exchanges/dto"
 	"Currency/internal/domain/rate/model"
 	rateRepository "Currency/internal/domain/rate/storage"
-	"Currency/internal/infrastructure/service"
 	"gorm.io/gorm"
 	"log"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 type ExchangeRateService struct {
 	repo   *rateRepository.RateRepository
-	client *service.CbrClient
+	client *CbrClient
 }
 
 func NewExchangeRateService(db *gorm.DB) *ExchangeRateService {
@@ -48,6 +48,12 @@ func (s *ExchangeRateService) IsExistOnDate(date time.Time) bool {
 	return s.repo.IsExistOnDate(date)
 }
 
+func (s *ExchangeRateService) AsyncGetNewExchange(onDate time.Time, group *sync.WaitGroup) {
+	defer group.Done()
+
+	s.GetNewExchangeRateOnDate(onDate)
+}
+
 func (s *ExchangeRateService) GetNewExchangeRateOnDate(onDate time.Time) {
 	isExist := s.IsExistOnDate(onDate)
 
@@ -60,8 +66,11 @@ func (s *ExchangeRateService) GetNewExchangeRateOnDate(onDate time.Time) {
 
 	var ratePairCollection model.RatePairCollection
 	for _, exchangeRate := range cbrRates.Valute {
-		pair := createRatePair(exchangeRate, onDate)
-		ratePairCollection.AddRatePair(pair)
+
+		if exchangeRate.CharCode != "" {
+			pair := createRatePair(exchangeRate, onDate)
+			ratePairCollection.AddRatePair(pair)
+		}
 	}
 
 	s.saveRatePairCollection(ratePairCollection)
@@ -79,7 +88,7 @@ func (s *ExchangeRateService) triangulateRates(onDate time.Time) {
 }
 
 func createRatePair(rate dto.CbrRate, date time.Time) model.RatePair {
-	log.Printf("process %s/RUB", rate.CharCode)
+	//log.Printf("process %s/RUB", rate.CharCode)
 
 	exchangeRate, _ := strconv.ParseFloat(strings.Replace(rate.Value, ",", ".", 1), 64)
 	nominal, _ := strconv.ParseFloat(strings.Replace(rate.Nominal, ",", ".", 1), 64)

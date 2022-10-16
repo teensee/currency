@@ -1,7 +1,19 @@
-# Currency exchange 
+# Currency exchange
 
 1) GET http://10.10.10.1:10000/rates?onDate=07.10.2022 - получение курсов валют, на дату из цб
 2) GET http://10.10.10.1:10000/exchange?from=USD&to=RUB&onDate=07.10.2022 получение курса на дату из базы
+3) GET http://10.10.10.1:10000/rush - скачивание всех курсов из цб
+
+
+## Installation
+1) Склонировать репозиторий
+2) выполнить
+
+```bash
+cp .env.example .env
+```
+3) docker-compose up -d --build
+
 
 ## Работа с курсами
 ЦБ присылает 34 пары курсов валют. Из них получаются обратные курсы путем 1 / exchangeRate<br>
@@ -28,6 +40,4 @@ group by pair.currency_from, pair.currency_to
 [Источник](http://www.dpxo.net/articles/fx_rate_triangulation_sql.html)
 
 ## todo:
-1) постгрес в докере
-2) приложение в докер
-3) Волт
+1) приложение в докер

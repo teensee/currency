@@ -2,3 +2,4 @@ currency.db
 Makefile
 .idea
 .env
+build
