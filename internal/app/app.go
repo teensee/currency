@@ -6,37 +6,31 @@ import (
 	"Currency/internal/domain/rate/handlers/update_exchanges"
 	"Currency/internal/domain/rate/model"
 	"Currency/internal/domain/rate/service"
-	"context"
-	"errors"
-	"fmt"
 	"github.com/julienschmidt/httprouter"
-	"github.com/rs/cors"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"log"
-	"net"
 	"net/http"
-	"time"
 )
 
 type App struct {
-	config      *config.Config
-	router      *httprouter.Router
-	httpServer  *http.Server
-	db          *gorm.DB
-	handlersMap map[string]interface{}
+	config *config.Config
+	router *httprouter.Router
+	db     *gorm.DB
+	DI     *ServiceLocator
+	server *Server
 }
 
 func NewKernel(config *config.Config) App {
 	return App{
 		config: config,
+		server: NewServer(),
+		DI:     NewServiceLocator(),
 	}
 }
 
-func (a *App) Run() {
-	log.Print("Start HTTP server")
-
-	a.startHttp()
+func (a *App) End() {
+	a.server.ConfigureAndRun(a.config.Listen.BindIP, a.config.Listen.Port, a.config.AppDebug, a.router)
 }
 
 func (a *App) ConfigureDatabase() *App {
@@ -52,15 +46,11 @@ func (a *App) ConfigureDatabase() *App {
 	return a
 }
 
-func (a *App) ConfigureHandlers() *App {
+func (a *App) ConfigureServiceLocator() *App {
 	exchangeRateService := service.NewExchangeRateService(a.db)
-	getExchangeHandler := get_exchanges.NewHandler(exchangeRateService)
-	updateExchangeHandler := update_exchanges.NewHandler(exchangeRateService)
 
-	a.handlersMap = map[string]interface{}{
-		"GetExchangeHandler":    getExchangeHandler,
-		"UpdateExchangeHandler": updateExchangeHandler,
-	}
+	a.DI.Set(get_exchanges.ExchangeRateHandlerTag, get_exchanges.NewHandler(exchangeRateService))
+	a.DI.Set(update_exchanges.UpdateRateHandlerTag, update_exchanges.NewHandler(exchangeRateService))
 
 	return a
 }
@@ -69,12 +59,12 @@ func (a *App) ConfigureRoutes() *App {
 	log.Print("Configure routes")
 	r := httprouter.New()
 
-	r.GET("/exchange", a.handlersMap["GetExchangeHandler"].(*get_exchanges.GetExchangeRateHandler).ExchangeRate)
-	r.GET("/convert", a.handlersMap["GetExchangeHandler"].(*get_exchanges.GetExchangeRateHandler).Convert)
+	r.GET("/exchange", a.DI.Get(get_exchanges.ExchangeRateHandlerTag).(*get_exchanges.GetExchangeRateHandler).ExchangeRate)
+	r.GET("/convert", a.DI.Get(get_exchanges.ExchangeRateHandlerTag).(*get_exchanges.GetExchangeRateHandler).Convert)
 
 	//todo: move to scheduler call
-	r.HandlerFunc(http.MethodGet, "/rates", a.handlersMap["UpdateExchangeHandler"].(*update_exchanges.UpdateExchangeHandler).GetCbrExchangeRates)
-	r.HandlerFunc(http.MethodGet, "/rush", a.handlersMap["UpdateExchangeHandler"].(*update_exchanges.UpdateExchangeHandler).RushRates)
+	r.HandlerFunc(http.MethodGet, "/rates", a.DI.Get(update_exchanges.UpdateRateHandlerTag).(*update_exchanges.UpdateExchangeHandler).GetCbrExchangeRates)
+	//r.HandlerFunc(http.MethodGet, "/rush", a.DI.Get(update_exchanges.UpdateRateHandlerTag).(*update_exchanges.UpdateExchangeHandler).RushRates)
 
 	a.router = r
 
@@ -90,51 +80,8 @@ func (a *App) AfterInitializationEvents() *App {
 	}
 
 	if a.config.AppConfig.SyncRatesAfterStartup == true {
-		a.handlersMap["UpdateExchangeHandler"].(*update_exchanges.UpdateExchangeHandler).SyncRatesOnStartup()
+		a.DI.Get(update_exchanges.UpdateRateHandlerTag).(*update_exchanges.UpdateExchangeHandler).SyncRatesOnStartup()
 	}
 
 	return a
-}
-
-func (a *App) startHttp() {
-	log.Printf("bind application to host: %s and port: %s", a.config.Listen.BindIP, a.config.Listen.Port)
-
-	var listener net.Listener
-	var err error
-	listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", a.config.Listen.BindIP, a.config.Listen.Port))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	c := cors.New(cors.Options{
-		AllowedMethods:     []string{http.MethodGet, http.MethodPost},
-		AllowedOrigins:     []string{"http://localhost:3000", "http://localhost:8080"},
-		AllowCredentials:   true,
-		AllowedHeaders:     []string{"Location", "Charset", "Access-Control-Allow-Origin", "Content-Type", "content-type", "Origin", "Access"},
-		OptionsPassthrough: true,
-		ExposedHeaders:     []string{"Location", "Authorization", "Content-Disposition"},
-		Debug:              a.config.AppDebug,
-	})
-
-	handler := c.Handler(a.router)
-
-	a.httpServer = &http.Server{
-		Handler:      handler,
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
-	}
-
-	if err := a.httpServer.Serve(listener); err != nil {
-		switch {
-		case errors.Is(err, http.ErrServerClosed):
-			log.Fatal("server shutdown")
-		default:
-			log.Fatal(err)
-		}
-	}
-
-	err = a.httpServer.Shutdown(context.Background())
-	if err != nil {
-		log.Fatal(err)
-	}
 }

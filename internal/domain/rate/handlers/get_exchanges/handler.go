@@ -9,6 +9,8 @@ import (
 	"net/http"
 )
 
+const ExchangeRateHandlerTag = "GetExchangeHandler"
+
 type GetExchangeRateHandler struct {
 	service        *service2.ExchangeRateService
 	queryExtractor *service3.QueryExtractor

@@ -73,23 +73,16 @@ func (s *ExchangeRateService) GetNewExchangeRateOnDate(onDate time.Time) {
 		}
 	}
 
-	s.saveRatePairCollection(ratePairCollection)
-	go func() { s.triangulateRates(onDate) }()
+	s.repo.SavePairCollection(ratePairCollection)
 
 	log.Printf("Pairs was inserted to db")
 }
 
-func (s *ExchangeRateService) saveRatePairCollection(pairs model.RatePairCollection) {
-	s.repo.SavePairCollection(pairs)
-}
-
-func (s *ExchangeRateService) triangulateRates(onDate time.Time) {
+func (s *ExchangeRateService) TriangulateRates(onDate time.Time) {
 	s.repo.TriangulateRates(onDate)
 }
 
 func createRatePair(rate dto.CbrRate, date time.Time) model.RatePair {
-	//log.Printf("process %s/RUB", rate.CharCode)
-
 	exchangeRate, _ := strconv.ParseFloat(strings.Replace(rate.Value, ",", ".", 1), 64)
 	nominal, _ := strconv.ParseFloat(strings.Replace(rate.Nominal, ",", ".", 1), 64)
 

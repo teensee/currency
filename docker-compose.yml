@@ -1,11 +1,27 @@
-version: '3.2'
+version: '3.8'
 services:
+  currency:
+    container_name: ${SERVICE}_go
+    volumes:
+      - ./build:/currency/build
+    build:
+      context: .
+      dockerfile: ./.docker/ctx/go/Dockerfile
+    ports:
+      - ${NETWORK}:${BACKEND_PORT}:${BACKEND_PORT}
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    networks:
+      - backend
+
   postgres:
     image: postgres:12.3
     container_name: ${SERVICE}_postgres
     hostname: ${DB_HOST}
     ports:
-      - "5432:5432"
+      - ${NETWORK}:${DB_PORT}:${DB_PORT}
     volumes:
       - ./.docker/data/postgres:/var/lib/postgresql/data
       - ./.docker/conf/postgres/initdb:/docker-entrypoint-initdb.d

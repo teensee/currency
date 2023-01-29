@@ -18,7 +18,7 @@ type Config struct {
 		VaultApiKey string `env:"VAULT_API_KEY"`
 	}
 	Listen struct {
-		BindIP string `env:"BACKEND_IP" env-default:"10.10.10.1"`
+		BindIP string `env:"NETWORK" env-default:"10.10.10.1"`
 		Port   string `env:"BACKEND_PORT" env-default:"10000"`
 	}
 	AppConfig struct {

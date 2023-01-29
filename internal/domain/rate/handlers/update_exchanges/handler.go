@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+const UpdateRateHandlerTag = "updExchangeH"
+
 type UpdateExchangeHandler struct {
 	srv            *service2.ExchangeRateService
 	queryExtractor *service.QueryExtractor
